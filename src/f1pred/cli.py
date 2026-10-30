@@ -12,11 +12,15 @@ RESULTS = Path("results")
 
 
 def _frame_for(history: pd.DataFrame, race: pd.Series) -> pd.DataFrame:
-    if ((history["year"] == race["year"]) & (history["round"] == race["round"])).any():
-        return build_features(history)
-    latest = history[history["date"] == history["date"].max()]
-    fields = {k: race[k] for k in ("year", "round", "date", "race", "circuit")}
-    return build_features(add_upcoming(history, fields, latest))
+    """Variables de una carrera; si es futura, toma los inscritos de la qualy ya disputada."""
+    year, round_ = int(race["year"]), int(race["round"])
+    if ((history["year"] == year) & (history["round"] == round_)).any():
+        return build_features(data.enrich(history))
+    entrants = data.fetch_qualifying(year, round_)
+    if entrants.empty:
+        entrants = history.loc[history["date"] == history["date"].max(), ["driver", "code", "team"]]
+    fields = {k: race[k] for k in ("year", "round", "date", "race", "circuit", "lat", "lon")}
+    return build_features(data.enrich(add_upcoming(history, fields, entrants)))
 
 
 def _next_race(schedule: pd.DataFrame, history: pd.DataFrame) -> pd.Series:
@@ -31,13 +35,13 @@ def cmd_predict(args) -> None:
     frame = _frame_for(history, race)
     table_race, ranks, _, features = m.forecast(frame, args.year * 100 + int(race["round"]))
     table = m.summarize(table_race, ranks)
-    mode = "post-qualifying" if "grid_pct" in features else "pre-qualifying"
+    mode = "después de la qualy" if "grid_pct" in features else "antes de la qualy"
     print(f"{race['race']} {args.year} ({mode})")
     print(table.head(12).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     RESULTS.mkdir(exist_ok=True)
     stem = f"{args.year}_{int(race['round']):02d}_{race['circuit']}"
     table.to_csv(RESULTS / f"{stem}.csv", index=False, float_format="%.4f")
-    charts.win_chart(table, f"{race['race']} {args.year}: win probability ({mode})", str(RESULTS / f"{stem}.png"))
+    charts.win_chart(table, f"{race['race']} {args.year}: probabilidad de victoria ({mode})", str(RESULTS / f"{stem}.png"))
 
 
 def cmd_championship(args) -> None:
@@ -45,17 +49,16 @@ def cmd_championship(args) -> None:
     schedule = data.fetch_schedule(args.year)
     done = history[history["year"] == args.year]["round"].max()
     left = schedule[schedule["round"] > done]
-    if left["sprint"].any():
-        raise SystemExit("sprint weekends remain: sprint points are not modelled yet")
-    frames = [(_frame_for(history, r), args.year * 100 + int(r["round"])) for _, r in left.iterrows()]
-    table = championship.simulate_title(frames, data.fetch_standings(args.year))
+    frames = [(_frame_for(history, r), args.year * 100 + int(r["round"]), bool(r["sprint"])) for _, r in left.iterrows()]
+    season = history[(history["year"] == args.year) & (history["position"] == 1)]
+    table = championship.simulate_title(frames, data.fetch_standings(args.year), season["code"].value_counts().to_dict())
     print(table.head(8).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     RESULTS.mkdir(exist_ok=True)
     table.to_csv(RESULTS / f"{args.year}_championship.csv", index=False, float_format="%.4f")
 
 
 def cmd_backtest(args) -> None:
-    frame = build_features(data.load_history(last=args.year))
+    frame = build_features(data.enrich(data.load_history(last=args.year)))
     sections = []
     for mode, sigma in (("post", m.SIGMA_POST_QUALI), ("pre", m.SIGMA_PRE_QUALI)):
         results = backtest.run(frame, sigmas=(sigma,), mode=mode)

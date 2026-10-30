@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from f1pred.features import POST_QUALI, build_features
+from f1pred.features import POST_QUALI, add_upcoming, build_features
 
 
 def history(races=8):
@@ -36,3 +36,12 @@ def test_target_runs_from_winner_to_last_and_skips_retirements():
     assert out.loc[out["position"] == 1, "target"].item() == 0
     assert out.loc[out["position"] == 5, "target"].item() == 1
     assert out.loc[out["position"] == 6, "target"].isna().all()
+
+
+def test_upcoming_race_keeps_its_qualifying_data():
+    base = history()
+    entrants = base[base["round"] == 8][["driver", "code", "team", "grid", "quali_pos", "quali_time"]]
+    fields = {"year": 2026, "round": 9, "date": "2026-09-01", "race": "R9", "circuit": "monza"}
+    out = build_features(add_upcoming(base, fields, entrants))
+    race = out[out["round"] == 9]
+    assert race["quali_gap"].notna().all() and race["position"].isna().all()

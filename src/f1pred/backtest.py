@@ -1,4 +1,4 @@
-"""Walk-forward evaluation: each race is predicted using only earlier races."""
+"""Evaluación walk-forward: cada carrera se predice solo con carreras anteriores."""
 import numpy as np
 import pandas as pd
 from scipy.special import softmax
@@ -26,12 +26,12 @@ def _race_metrics(race: pd.DataFrame, ranks: np.ndarray, win: np.ndarray | None 
 
 
 def _ordering(values: np.ndarray, runs: int = 1) -> np.ndarray:
-    """Deterministic forecast as a rank matrix."""
+    """Pronóstico determinista como matriz de posiciones."""
     return np.tile(values.argsort().argsort(), (runs, 1))
 
 
 def _grid_win_rate(past: pd.DataFrame, race: pd.DataFrame) -> np.ndarray:
-    """Historical win rate of each grid slot: a fair probabilistic baseline."""
+    """Tasa histórica de victorias por posición de salida: baseline probabilístico justo."""
     past = past[past["position"].notna() & (past["grid"] > 0)]
     wins = past[past["position"] == 1].groupby("grid").size()
     starts = past.groupby("grid").size()
@@ -47,11 +47,12 @@ def run(frame: pd.DataFrame, first_year=2023, sigmas=(0.2,), mode="post") -> pd.
         past = frame[frame["race_id"] < race_id]
         year, era = int(race["year"].iloc[0]), int(race["era"].iloc[0])
         features = m.POST_QUALI if mode == "post" else PRE_QUALI
-        scores = m.fit(past, features, year, era).predict(race[features])
+        scores = m.predict(m.fit(past, features, year, era), race, features)
         baseline = past[past["year"] >= year - 1]["dnf"].astype(float).mean()
         dnf_p = m.dnf_probability(race, baseline)
         for sigma in sigmas:
-            ranks = m.simulate(scores, dnf_p, sigma, runs=2000, seed=int(race_id))
+            rain = race["rain_mm"].iloc[0]
+            ranks = m.simulate(scores, dnf_p, sigma, 2000, int(race_id), race["team"].to_numpy(), 0.0 if pd.isna(rain) else rain)
             rows.append({"race_id": race_id, "year": year, "method": f"model_s{sigma}", **_race_metrics(race, ranks)})
         rows.append({"race_id": race_id, "year": year, "method": "grid",
                      **_race_metrics(race, _ordering(race["grid_pct"].to_numpy()), _grid_win_rate(past, race))})

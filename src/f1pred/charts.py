@@ -12,7 +12,7 @@ def win_chart(table: pd.DataFrame, title: str, path: str, top: int = 8) -> None:
     for y, value in enumerate(rows["win"] * 100):
         ax.text(value + 0.6, y, f"{value:.1f}%", va="center", fontsize=10, color="#333333")
     ax.set_title(title, loc="left", fontsize=13)
-    ax.set_xlabel("Win probability (%)", color="#555555")
+    ax.set_xlabel("Probabilidad de victoria (%)", color="#555555")
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(length=0)
     ax.grid(axis="x", color="#e6e6e6")
