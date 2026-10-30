@@ -3,7 +3,7 @@ name = "f1pred"
 version = "0.1.0"
 description = "Probabilistic Formula 1 race and championship forecasts, validated walk-forward"
 requires-python = ">=3.11"
-dependencies = ["lightgbm>=4.5", "matplotlib>=3.9", "numpy>=2.0", "pandas>=2.2", "pyarrow>=17", "requests>=2.32", "scikit-learn>=1.5"]
+dependencies = ["lightgbm>=4.5", "matplotlib>=3.9", "numpy>=2.0", "pandas>=2.2", "pyarrow>=17", "requests>=2.32", "scipy>=1.13"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
