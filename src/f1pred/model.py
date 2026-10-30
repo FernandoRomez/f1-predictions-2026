@@ -12,7 +12,8 @@ PARAMS = dict(
 )
 SEASON_DECAY = 0.7  # weight multiplier per season of age
 ERA_BOOST = 2.0  # extra weight for races under the current regulations
-DEFAULT_SIGMA = 0.2
+SIGMA_POST_QUALI = 0.06  # chosen on 2023-24 only
+SIGMA_PRE_QUALI = 0.08
 POINTS = np.array([25, 18, 15, 12, 10, 8, 6, 4, 2, 1], dtype=float)
 
 
@@ -35,7 +36,7 @@ def dnf_probability(race: pd.DataFrame, baseline: float) -> np.ndarray:
     return np.clip(0.3 * driver + 0.4 * team + 0.3 * baseline, 0.02, 0.5)
 
 
-def simulate(scores, dnf_p, sigma=DEFAULT_SIGMA, runs=5000, seed=37) -> np.ndarray:
+def simulate(scores, dnf_p, sigma=SIGMA_POST_QUALI, runs=5000, seed=37) -> np.ndarray:
     """Return a runs x drivers matrix of finishing ranks, 0 = winner."""
     rng = np.random.default_rng(seed)
     scores, dnf_p = np.asarray(scores), np.asarray(dnf_p)
@@ -60,12 +61,12 @@ def points_for(ranks: np.ndarray) -> np.ndarray:
     return table[ranks]
 
 
-def forecast(frame: pd.DataFrame, race_id: int, sigma=DEFAULT_SIGMA, runs=5000, seed=37):
+def forecast(frame: pd.DataFrame, race_id: int, runs=5000, seed=37):
     """Train on all races before race_id and simulate it; uses quali data when present."""
     race = frame[frame["race_id"] == race_id]
     past = frame[frame["race_id"] < race_id]
     has_quali = race["quali_gap"].notna().mean() > 0.5
-    features = POST_QUALI if has_quali else PRE_QUALI
+    features, sigma = (POST_QUALI, SIGMA_POST_QUALI) if has_quali else (PRE_QUALI, SIGMA_PRE_QUALI)
     model = fit(past, features, int(race["year"].iloc[0]), int(race["era"].iloc[0]))
     scores = model.predict(race[features])
     baseline = past[past["year"] >= race["year"].iloc[0] - 1]["dnf"].astype(float).mean()
