@@ -51,15 +51,20 @@ def cmd_predict(args) -> None:
     schedule = data.fetch_schedule(args.year)
     race = schedule[schedule["round"] == args.round].iloc[0] if args.round else _next_race(schedule, history)
     frame = _frame_for(history, race, _parse_grid(args.grid))
-    table_race, ranks, _, features, win = m.forecast(frame, args.year * 100 + int(race["round"]))
+    table_race, ranks, _, features, win = m.forecast(frame, args.year * 100 + int(race["round"]), runs=args.runs)
     table = m.summarize(table_race, ranks, win)
     mode = "después de la qualy" if "grid_pct" in features else "antes de la qualy"
     print(f"{race['race']} {args.year} ({mode})")
-    print(table.head(12).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
+    view = table.copy()
+    floor = 100 / args.runs
+    for col in ("win", "podium", "points"):
+        view[col] = [f"<{floor:.5f}%" if v == 0 else f"{v * 100:.5f}%" for v in table[col]]
+    print(view.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    print(f"{args.runs:,} simulaciones; '<' = no ocurrió en ninguna, cota de resolución.")
     RESULTS.mkdir(exist_ok=True)
     stem = f"{args.year}_{int(race['round']):02d}_{race['circuit']}"
-    table.to_csv(RESULTS / f"{stem}.csv", index=False, float_format="%.4f")
-    charts.win_chart(table, f"{race['race']} {args.year}: probabilidad de victoria ({mode})", str(RESULTS / f"{stem}.png"))
+    table.to_csv(RESULTS / f"{stem}.csv", index=False, float_format="%.8g")
+    charts.win_chart(table, f"{race['race']} {args.year}: probabilidades ({mode})", str(RESULTS / f"{stem}.png"), args.runs)
 
 
 def cmd_championship(args) -> None:
@@ -129,6 +134,7 @@ def main() -> None:
         if name == "predict":
             command.add_argument("--round", type=int)
         if name in ("predict", "championship"):
+            command.add_argument("--runs", type=int, default=1_000_000)
             command.add_argument("--grid", help='parrilla tras sanciones, p. ej. "VER=5,ANT=4"')
     args = parser.parse_args()
     args.handler(args)
