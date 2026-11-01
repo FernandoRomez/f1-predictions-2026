@@ -11,12 +11,30 @@ from .features import add_upcoming, build_features
 RESULTS = Path("results")
 
 
-def _frame_for(history: pd.DataFrame, race: pd.Series) -> pd.DataFrame:
+def _parse_grid(text: str | None) -> dict[str, int]:
+    """Convierte "VER=5,ANT=4" en parrilla final tras sanciones."""
+    if not text:
+        return {}
+    pairs = (item.split("=") for item in text.split(","))
+    return {code.strip().upper(): int(slot) for code, slot in pairs}
+
+
+def _apply_grid(entrants: pd.DataFrame, grid: dict[str, int]) -> pd.DataFrame:
+    """La API da el orden de qualy; las sanciones de parrilla se indican a mano."""
+    unknown = set(grid) - set(entrants["code"])
+    if unknown:
+        raise SystemExit(f"--grid: pilotos desconocidos: {sorted(unknown)}")
+    return entrants.assign(grid=entrants["code"].map(grid).fillna(entrants["grid"]).astype(int))
+
+
+def _frame_for(history: pd.DataFrame, race: pd.Series, grid: dict[str, int] | None = None) -> pd.DataFrame:
     """Variables de una carrera; si es futura, toma los inscritos de la qualy ya disputada."""
     year, round_ = int(race["year"]), int(race["round"])
     if ((history["year"] == year) & (history["round"] == round_)).any():
         return build_features(data.enrich(history))
     entrants = data.fetch_qualifying(year, round_)
+    if not entrants.empty and grid:
+        entrants = _apply_grid(entrants, grid)
     if entrants.empty:
         entrants = history.loc[history["date"] == history["date"].max(), ["driver", "code", "team"]]
     fields = {k: race[k] for k in ("year", "round", "date", "race", "circuit", "lat", "lon")}
@@ -32,7 +50,7 @@ def cmd_predict(args) -> None:
     history = data.load_history(last=args.year)
     schedule = data.fetch_schedule(args.year)
     race = schedule[schedule["round"] == args.round].iloc[0] if args.round else _next_race(schedule, history)
-    frame = _frame_for(history, race)
+    frame = _frame_for(history, race, _parse_grid(args.grid))
     table_race, ranks, _, features = m.forecast(frame, args.year * 100 + int(race["round"]))
     table = m.summarize(table_race, ranks)
     mode = "después de la qualy" if "grid_pct" in features else "antes de la qualy"
@@ -49,7 +67,8 @@ def cmd_championship(args) -> None:
     schedule = data.fetch_schedule(args.year)
     done = history[history["year"] == args.year]["round"].max()
     left = schedule[schedule["round"] > done]
-    frames = [(_frame_for(history, r), args.year * 100 + int(r["round"]), bool(r["sprint"])) for _, r in left.iterrows()]
+    grid = _parse_grid(args.grid)
+    frames = [(_frame_for(history, r, grid if r["round"] == done + 1 else None), args.year * 100 + int(r["round"]), bool(r["sprint"])) for _, r in left.iterrows()]
     season = history[(history["year"] == args.year) & (history["position"] == 1)]
     table = championship.simulate_title(frames, data.fetch_standings(args.year), season["code"].value_counts().to_dict())
     print(table.head(8).to_string(index=False, float_format=lambda v: f"{v:.3f}"))
@@ -80,6 +99,8 @@ def main() -> None:
         command.set_defaults(handler=handler)
         if name == "predict":
             command.add_argument("--round", type=int)
+        if name in ("predict", "championship"):
+            command.add_argument("--grid", help='parrilla tras sanciones, p. ej. "VER=5,ANT=4"')
     args = parser.parse_args()
     args.handler(args)
 

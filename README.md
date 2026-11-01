@@ -6,17 +6,19 @@ Inspirado en [mar-antaya/2025_f1_predictions](https://github.com/mar-antaya/2025
 
 ![Pronóstico de México 2026](results/2026_19_rodriguez.png)
 
-## Último pronóstico: GP de la Ciudad de México, antes de la qualy
+## Último pronóstico: GP de la Ciudad de México, después de la qualy
 
-| Piloto | Equipo | Victoria | Podio |
-|---|---|---:|---:|
-| VER | Red Bull | 42.9% | 76.6% |
-| ANT | Mercedes | 30.6% | 72.7% |
-| LEC | Ferrari | 13.0% | 54.8% |
-| NOR | McLaren | 5.4% | 31.8% |
-| HAM | Ferrari | 4.2% | 26.8% |
+Parrilla real, con las sanciones de un puesto a Verstappen y Lawson por su contacto en FP2.
 
-Tómalo solo como referencia: el modelo previo a la qualy acierta poco y estas cifras son demasiado seguras. Vuelve a correr `f1pred predict` tras la qualy para usar la parrilla real. En el campeonato, Antonelli gana en prácticamente todas las simulaciones, con 123 puntos de ventaja y 125 en juego.
+| Piloto | Equipo | Salida | Victoria | Podio |
+|---|---|---:|---:|---:|
+| HAM | Ferrari | 1 | 35.1% | 76.6% |
+| RUS | Mercedes | 2 | 30.8% | 73.1% |
+| VER | Red Bull | 5 | 20.3% | 64.8% |
+| LEC | Ferrari | 3 | 11.2% | 54.7% |
+| ANT | Mercedes | 4 | 2.3% | 24.1% |
+
+En el campeonato, Antonelli gana en todas las simulaciones, con 123 puntos de ventaja y 125 en juego.
 
 ## Variables
 
@@ -49,6 +51,7 @@ En log-loss y Brier, menor es mejor. Solo 2026 (18 carreras): el modelo con qual
 uv venv --python 3.13 && uv pip install -e ".[dev]"
 .venv/bin/f1pred predict
 .venv/bin/f1pred predict --round 20
+.venv/bin/f1pred predict --grid "VER=5,ANT=4,LAW=9,LIN=8"  # sanciones de parrilla
 .venv/bin/f1pred championship
 .venv/bin/f1pred backtest
 .venv/bin/python -m pytest

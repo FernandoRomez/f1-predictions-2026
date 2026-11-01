@@ -63,10 +63,15 @@ def fetch_schedule(year: int) -> pd.DataFrame:
     )
 
 
+def _code(driver: dict) -> str:
+    """Los reservas pueden no traer código en la API."""
+    return driver.get("code", driver["familyName"][:3].upper())
+
+
 def fetch_standings(year: int) -> pd.DataFrame:
     tables = _get(f"{BASE}/{year}/driverstandings.json")["StandingsTable"]["StandingsLists"]
     return pd.DataFrame(
-        {"driver": s["Driver"]["driverId"], "code": s["Driver"]["code"], "points": float(s["points"])}
+        {"driver": s["Driver"]["driverId"], "code": _code(s["Driver"]), "points": float(s["points"])}
         for s in tables[0]["DriverStandings"]
     )
 
@@ -135,7 +140,7 @@ def fetch_qualifying(year: int, round_: int) -> pd.DataFrame:
         times = [_seconds(q.get(k)) for k in ("Q1", "Q2", "Q3")]
         rows.append({
             "driver": q["Driver"]["driverId"],
-            "code": q["Driver"]["code"],
+            "code": _code(q["Driver"]),
             "team": q["Constructor"]["constructorId"],
             "grid": int(q["position"]),
             "quali_pos": int(q["position"]),
