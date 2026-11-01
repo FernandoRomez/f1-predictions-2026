@@ -4,6 +4,20 @@ Pronósticos probabilísticos de Fórmula 1: probabilidad de victoria, podio y p
 
 Inspirado en [mar-antaya/2025_f1_predictions](https://github.com/mar-antaya/2025_f1_predictions). Es una reescritura desde cero, sin código compartido.
 
+![Pronóstico de México 2026](results/2026_19_rodriguez.png)
+
+## Último pronóstico: GP de la Ciudad de México, después de la qualy
+
+Parrilla real, con las sanciones de un puesto a Verstappen y Lawson.
+
+| Piloto | Equipo | Victoria | Podio |
+|---|---|---:|---:|
+| HAM | ferrari | 44.6% | 81.9% |
+| RUS | mercedes | 37.9% | 79.8% |
+| LEC | ferrari | 8.0% | 55.8% |
+| VER | red_bull | 6.0% | 44.8% |
+| ANT | mercedes | 3.5% | 34.6% |
+
 ## Estado del modelo
 
 - **Configuración:** los hiperparámetros están versionados en `src/f1pred/config.json`. Los de simulación y el blend se eligieron con `scripts/tune.py` usando solo 2023-2024.
