@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 
+from . import circuits
+
 # Cambios de reglamento: el rendimiento del auto apenas se conserva entre estas etapas.
 ERAS = [(2018, 2021), (2022, 2025), (2026, 2100)]
 
@@ -17,11 +19,12 @@ PRE_QUALI = [
     "driver_form", "driver_form_recent", "team_form", "team_form_recent", "team_quali_form",
     "driver_vs_team", "driver_circuit", "team_circuit", "driver_dnf_rate", "team_dnf_rate",
     "era_races", "street", "driver_quali_form", "quali_vs_team", "positions_gained", "wet_form",
-    "wet_edge", "team_pit_time", "circuit_overtakes", "circuit_dnf", "circuit_stops", "rain_mm",
-    "temp_max", "wind_max", "elevation",
+    "wet_edge", "team_pit_time", "team_stint_laps", "team_pit_time_std", "circuit_overtakes",
+    "circuit_dnf", "circuit_stops", "circuit_sc", "rain_mm", "temp_max", "wind_max", "elevation",
 ]
 POST_QUALI = PRE_QUALI + ["grid_pct", "quali_gap", "grid_penalty", "quali_gap_vs_form"]
-OPTIONAL = ["rain_mm", "temp_max", "wind_max", "elevation", "pit_stops", "pit_time"]
+OPTIONAL = ["rain_mm", "temp_max", "wind_max", "elevation", "pit_stops", "pit_time",
+            "pit_time_mean", "pit_time_std", "first_stint_laps", "stint_laps"]
 
 
 def _era(year: int) -> int:
@@ -51,6 +54,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df["team"] = df["team"].replace(LINEAGE)
     df["era"] = df["year"].map(_era)
     df["street"] = df["circuit"].isin(STREET).astype(int)
+    df["circuit_sc"] = df["circuit"].map(circuits.sc_chaos_factor)
     df["race_id"] = df["year"] * 100 + df["round"]
 
     # Objetivo: orden de llegada entre clasificados, 0 = ganador, 1 = último.
@@ -90,7 +94,8 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         df.assign(dnf_value=dnf.to_numpy())
         .groupby(["era", "team", "circuit", "race_id"], as_index=False)
         .agg(target=("target", "mean"), quali_gap=("quali_gap", "mean"), dnf_value=("dnf_value", "mean"),
-              pit_time=("pit_time", "mean"))
+              pit_time=("pit_time", "mean"), pit_time_std=("pit_time_std", "mean"),
+              stint_laps=("stint_laps", "mean"))
         .sort_values("race_id")
     )
     keys = [team_race["era"], team_race["team"]]
@@ -99,8 +104,11 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     team_race["team_quali_form"] = _lagged_ewm(team_race["quali_gap"], keys, 0.3)
     team_race["team_dnf_rate"] = _lagged_ewm(team_race["dnf_value"], keys, 0.1)
     team_race["team_pit_time"] = _lagged_ewm(team_race["pit_time"], keys, 0.2)
+    team_race["team_stint_laps"] = _lagged_ewm(team_race["stint_laps"], keys, 0.2)
+    team_race["team_pit_time_std"] = _lagged_ewm(team_race["pit_time_std"], keys, 0.2)
     team_race["team_circuit"] = _lagged_mean(team_race["target"], [team_race["team"], team_race["circuit"], team_race["era"]])
-    columns = ["team_form", "team_form_recent", "team_quali_form", "team_dnf_rate", "team_circuit", "team_pit_time"]
+    columns = ["team_form", "team_form_recent", "team_quali_form", "team_dnf_rate", "team_circuit",
+               "team_pit_time", "team_stint_laps", "team_pit_time_std"]
     df = df.merge(team_race[["team", "race_id", *columns]], on=["team", "race_id"], how="left")
 
     df["driver_vs_team"] = df["driver_form"] - df["team_form"]
