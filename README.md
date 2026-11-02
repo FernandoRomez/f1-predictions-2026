@@ -4,19 +4,32 @@ Pronósticos probabilísticos de Fórmula 1: probabilidad de victoria, podio y p
 
 Inspirado en [mar-antaya/2025_f1_predictions](https://github.com/mar-antaya/2025_f1_predictions). Es una reescritura desde cero, sin código compartido.
 
-![Pronóstico de México 2026](results/2026_19_rodriguez.png)
+![Pronóstico de Brasil 2026](results/2026_20_interlagos.png)
 
-## Último pronóstico: GP de la Ciudad de México, después de la qualy
+## Último pronóstico: GP de Brasil, antes de la qualy
 
-Parrilla real, con las sanciones de un puesto a Verstappen y Lawson.
+Aún no hay parrilla: se actualizará después de la qualy.
 
 | Piloto | Equipo | Victoria | Podio |
 |---|---|---:|---:|
-| HAM | ferrari | 44.6% | 81.9% |
-| RUS | mercedes | 37.9% | 79.8% |
-| LEC | ferrari | 8.0% | 55.8% |
-| VER | red_bull | 6.0% | 44.8% |
-| ANT | mercedes | 3.5% | 34.6% |
+| VER | red_bull | 39.5% | 70.4% |
+| HAM | ferrari | 18.5% | 58.1% |
+| ANT | mercedes | 16.8% | 55.4% |
+| LEC | ferrari | 14.4% | 51.7% |
+| RUS | mercedes | 6.0% | 31.5% |
+
+## Resultado anterior: GP de la Ciudad de México
+
+Ganó Verstappen desde el 5.º puesto de parrilla, con solo 7.1% de probabilidad en el pronóstico tras la qualy. Hamilton, el favorito (43.8%), fue segundo. Del podio previsto solo se cumplió Hamilton: Russell (80.1% de podio) acabó 6.º, mientras que Antonelli (32.0%) fue 3.º.
+
+| Pos. | Piloto | Salida | Victoria prevista | Podio previsto |
+|---:|---|---:|---:|---:|
+| 1 | VER | 5 | 7.1% | 47.9% |
+| 2 | HAM | 1 | 43.8% | 82.0% |
+| 3 | ANT | 4 | 3.0% | 32.0% |
+| 4 | LEC | 3 | 7.9% | 54.4% |
+| 5 | NOR | 6 | 0.1% | 2.7% |
+| 6 | RUS | 2 | 38.1% | 80.1% |
 
 ## Estado del modelo
 
@@ -26,18 +39,20 @@ Parrilla real, con las sanciones de un puesto a Verstappen y Lawson.
 
 ## Backtest
 
-Tabla del periodo 2025-2026 (42 carreras, tras la qualy). Esas carreras no se usaron en el ajuste de la configuración 2.2.0, pero sí se vieron al diseñar el modelo y al evaluar versiones anteriores, así que no son un test totalmente ciego.
+Tabla del periodo 2025-2026 (43 carreras, tras la qualy). Esas carreras no se usaron en el ajuste de la configuración 2.2.0, pero sí se vieron al diseñar el modelo y al evaluar versiones anteriores, así que no son un test totalmente ciego. México 2026 es la excepción: se corrió después de fijar la configuración.
 
 | Método | Log-loss | Brier | Ganador | Spearman |
 |---|---:|---:|---:|---:|
-| **Modelo con qualy** | **0.923** | **0.470** | 61.9% | **0.670** |
-| Solo parrilla | 1.150 | 0.522 | **69.0%** | 0.654 |
-| Modelo sin qualy | 1.586 | 0.746 | 38.1% | 0.587 |
-| Solo forma del piloto | 1.951 | 0.841 | 23.8% | 0.566 |
+| **Modelo con qualy** | **0.965** | **0.487** | 60.5% | **0.673** |
+| Solo parrilla | 1.229 | 0.541 | **67.4%** | 0.656 |
+| Modelo sin qualy | 1.572 | 0.741 | 39.5% | 0.593 |
+| Solo forma del piloto | 1.937 | 0.837 | 25.6% | 0.572 |
 
-En log-loss y Brier, menor es mejor. Con bootstrap pareado al 90%, el modelo con qualy supera a la parrilla en log-loss (diferencia -0.228, de -0.378 a -0.076). En ganadores y Brier la diferencia no es concluyente. El detalle está en `results/backtest*.csv`.
+En log-loss y Brier, menor es mejor. Con bootstrap pareado al 90%, el modelo con qualy supera a la parrilla en log-loss (diferencia -0.264, de -0.438 a -0.098). En ganadores y Brier la diferencia no es concluyente. El detalle está en `results/backtest*.csv`.
 
 ## Campeonato
+
+**Antonelli ya es campeón matemático:** tras 19 de 23 carreras tiene 380 puntos, 119 más que Verstappen (261), y solo quedan 100 en juego (4 carreras, sin sprints). Les siguen Hamilton (259), Russell (250) y Leclerc (245).
 
 `f1pred championship` escribe la probabilidad de título en `results/2026_championship.csv`. `title_lo` y `title_hi` miden el error de muestreo Monte Carlo, no la incertidumbre del modelo.
 
